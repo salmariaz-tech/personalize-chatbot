@@ -1,72 +1,104 @@
-import React, { useState, useContext } from 'react';
-import axios from 'axios';
-import { UserContext } from '../context/UserContext';
+import React, { useState } from "react";
+import axios from "axios";
+import "../index.css";
+
+
 
 const Chatbot = () => {
-  const { userInfo, chatHistory, setChatHistory } = useContext(UserContext);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
+  const [response, setResponse] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setQuery(e.target.value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
 
-    setChatHistory(prev => [...prev, { sender: 'user', text: query }]);
+    setLoading(true);
+    setResponse("");
 
     try {
       const res = await axios.post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBd89v2DDyfus0k9uYsm_ctcyMAR9BO4PQ",
         {
           contents: [
             {
               parts: [
                 {
-                  text: `You are an expert AI Scientist. Always address the user by their name (${userInfo.name}) and only answer AI-related questions. If it's unrelated, reply: "I don't have knowledge about that."`
+                  text: `You are an expert AI Scientist only answer AI related queries. If user asks anything else, reply: "I Don't have knowledge about that".`,
                 },
-                { text: `User query: ${query}` }
-              ]
-            }
-          ]
+                {
+                  text: `User query: ${query}`,
+                },
+              ],
+            },
+          ],
         },
         {
           headers: {
             "Content-Type": "application/json",
-            "X-goog-api-key": "AIzaSyB-YMsvZ6mUt3n_9vP66JACDRtx9-bY-Vo"
-          }
+          },
         }
       );
 
-      const aiResponse = res.data.candidates[0].content.parts[0].text;
-
-      setChatHistory(prev => [...prev, { sender: 'bot', text: aiResponse }]);
+      if (
+        res.data &&
+        res.data.candidates &&
+        res.data.candidates[0].content &&
+        res.data.candidates[0].content.parts[0].text
+      ) {
+        setResponse(res.data.candidates[0].content.parts[0].text);
+      } else {
+        setResponse("⚠️ No response received. Please try again.");
+      }
     } catch (err) {
       console.error(err);
+      setResponse("⚠️ Something went wrong. Please try again!");
+    } finally {
+      setLoading(false);
     }
-
-    setQuery('');
   };
 
   return (
-    <div className="chat-container">
-      <h2>Welcome, {userInfo?.name}!</h2>
-      <div className="chat-history">
-        {chatHistory.map((msg, idx) => (
-          <div key={idx} className={`message ${msg.sender}`}>
-            <b>{msg.sender === 'user' ? userInfo.name : 'AI'}:</b> {msg.text}
-          </div>
-        ))}
-      </div>
+    <div className="chatbot-container">
+      <h1 className="chatbot-title">🤖 AI Chatbot</h1>
 
-      <form onSubmit={handleSubmit} className="chat-input">
-        <input 
-          type="text" 
-          placeholder="Ask something about AI..." 
-          value={query} 
-          onChange={(e) => setQuery(e.target.value)} 
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="query" className="chatbot-label">
+          Enter Your Query
+        </label>
+        <input
+          type="text"
+          id="query"
+          name="query"
+          value={query}
+          onChange={handleChange}
+          placeholder="Ask me anything about AI..."
+          className="chatbot-input"
         />
-        <button type="submit">Send</button>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="chatbot-button"
+        >
+          {loading ? "Processing..." : "Send Query"}
+        </button>
       </form>
+
+      {response && (
+        <div className="chatbot-response">
+          <h2 className="chatbot-response-title">Chatbot Response:</h2>
+          <p className="chatbot-response-text">{response}</p>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Chatbot;
+
+
